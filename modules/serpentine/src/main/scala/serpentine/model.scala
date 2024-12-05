@@ -3,18 +3,21 @@ package serpentine
 enum CType:
   case Int
   case Float
+  case Double
   case String
   case Bool
 
   def ctype: String = this match
     case CType.Int    => "ctypes.c_int"
     case CType.Float  => "ctypes.c_float"
+    case CType.Double => "ctypes.c_double"
     case CType.String => "ctypes.c_char_p"
     case CType.Bool   => "ctypes.c_bool"
 
   def ptype: String = this match
     case CType.Int    => "int"
     case CType.Float  => "float"
+    case CType.Double => "double"
     case CType.String => "str"
     case CType.Bool   => "bool"
 
@@ -24,6 +27,7 @@ final case class PythonInput(label: String, t: CType):
   def codeOf: String = t match
     case serpentine.CType.Int    => label
     case serpentine.CType.Float  => label
+    case serpentine.CType.Double => label
     case serpentine.CType.String => s"$label.encode('utf-8')"
     case CType.Bool              => label
 

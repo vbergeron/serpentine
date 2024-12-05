@@ -1,6 +1,6 @@
 package exemples
 
-import serpentine.PythonBindings
+import serpentine.*
 
 object Exemples derives PythonBindings:
 

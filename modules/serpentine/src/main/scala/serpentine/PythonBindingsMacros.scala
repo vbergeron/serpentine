@@ -6,13 +6,40 @@ import java.nio.file.*
 
 object PythonBindingsMacros {
 
+  /*
+  void 	Unit
+  bool 	unsafe.CBool
+  char 	unsafe.CChar
+  signed char 	unsafe.CSignedChar
+  unsigned char 	unsafe.CUnsignedChar[^1]
+  short 	unsafe.CShort
+  unsigned short 	unsafe.CUnsignedShort[^2]
+  int 	unsafe.CInt
+  long int 	unsafe.CLongInt
+  unsigned int 	unsafe.CUnsignedInt[^3]
+  unsigned long int 	unsafe.CUnsignedLongInt[^4]
+  long 	unsafe.CLong
+  unsigned long 	unsafe.CUnsignedLong[^5]
+  long long 	unsafe.CLongLong
+  unsigned long long 	unsafe.CUnsignedLongLong[^6]
+  size_t 	unsafe.CSize
+  ssize_t 	unsafe.CSSize
+  ptrdiff_t 	unsafe.CPtrDiff[^7]
+  wchar_t 	unsafe.CWideChar
+  char16_t 	unsafe.CChar16
+  char32_t 	unsafe.CChar32
+  float 	unsafe.CFloat
+  double 	unsafe.CDouble
+   */
+
   def intoPythonType[A](t: Type[A])(using Quotes): CType =
     t match
       case '[Int]                        => CType.Int
       case '[Float]                      => CType.Float
+      case '[Double]                     => CType.Double
       case '[scalanative.unsafe.CString] => CType.String
       case '[Boolean]                    => CType.Bool
-      case '[t] =>
+      case '[t]                          =>
         quotes.reflect.report.errorAndAbort(s"Unsupported type: ${Type.show[t]}")
 
   def findSuitableDirectory(using Quotes): Path =
@@ -36,7 +63,7 @@ object PythonBindingsMacros {
     mirror match
       case '{
             $m: OpsMirror.Of[A] {
-              type MirroredOperations = ops
+              type MirroredOperations      = ops
               type MirroredOperationLabels = labels
             }
           } =>
@@ -46,9 +73,16 @@ object PythonBindingsMacros {
           Type.of[op] match
             case '[Operation {
                   type InputLabels = labels
-                  type InputTypes = itypes
-                  type OutputType = otype
+                  type InputTypes  = itypes
+                  type OutputType  = otype
+
+                  type Metadata = meta
                 }] =>
+              report.info(s"meta: ${OpsMirror
+                  .typesFromTuple[meta]
+                  .map:
+                    case '[t] => TypeRepr.of[t].show
+                }")
               val labels = OpsMirror.stringsFromTuple[labels]
               val itypes = OpsMirror.typesFromTuple[itypes].map { case '[t] =>
                 intoPythonType(Type.of[t])

@@ -100,15 +100,6 @@ object OpsMirror:
 
     def isMeta(annot: Term): Boolean =
       annot.tpe <:< TypeRepr.of[MetaAnnotation]
-      // if annot.tpe <:< TypeRepr.of[MetaAnnotation] then true
-      // else if annot.tpe <:< TypeRepr.of[scala.annotation.internal.SourceFile]
-      // then false
-      // else
-      //  report.error(
-      //    s"annotation ${annot.show} does not extend ${Type.show[MetaAnnotation]}",
-      //    annot.pos
-      //  )
-      //  false
 
     def encodeMeta(annot: Term): Type[?] =
       AnnotatedType(TypeRepr.of[Meta], annot).asType
@@ -146,9 +137,11 @@ object OpsMirror:
             report.errorAndAbort(
               s"generic method ${method.name} is not supported"
             )
-      val inTup                                         = typesToTuple(inputTypes)
-      val inLab                                         = typesToTuple(inputLabels)
-      val inMet                                         = typesToTuple(inputMetas)
+
+      val inTup = typesToTuple(inputTypes)
+      val inLab = typesToTuple(inputLabels)
+      val inMet = typesToTuple(inputMetas)
+
       (meta, inTup, inLab, inMet, output) match
         case ('[m], '[i], '[l], '[iM], '[o]) =>
           Type.of[
