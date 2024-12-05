@@ -22,14 +22,11 @@ sealed trait VoidType
 
 open class MetaAnnotation extends scala.annotation.RefiningAnnotation
 
-open class ErrorAnnotation[E] extends MetaAnnotation
-
 sealed trait Operation:
   type Metadata <: Tuple
   type InputTypes <: Tuple
   type InputLabels <: Tuple
   type InputMetadatas <: Tuple
-  type ErrorType
   type OutputType
 end Operation
 
@@ -116,36 +113,13 @@ object OpsMirror:
     def encodeMeta(annot: Term): Type[?] =
       AnnotatedType(TypeRepr.of[Meta], annot).asType
 
-    val (errorTpe, gmeta) =
-      val annots                    = cls.annotations.filter(isMeta)
-      val (errorAnnots, metaAnnots) =
-        annots.partition(annot => annot.tpe <:< TypeRepr.of[ErrorAnnotation[?]])
-      val errorTpe                  =
-        if errorAnnots.isEmpty then Type.of[VoidType]
-        else
-          errorAnnots
-            .map: annot =>
-              annot.asExpr match
-                case '{ $a: ErrorAnnotation[t] } => Type.of[t]
-            .head
-      (errorTpe, metaAnnots.map(encodeMeta))
-    end val
+    val annots = cls.annotations.filter(isMeta).map(encodeMeta)
 
     val ops       = decls.map(method =>
-      val metaAnnots                                    =
-        val annots                    = method.annotations.filter(isMeta)
-        val (errorAnnots, metaAnnots) =
-          annots.partition(annot => annot.tpe <:< TypeRepr.of[ErrorAnnotation[?]])
-        if errorAnnots.nonEmpty then
-          errorAnnots.foreach: annot =>
-            report.error(
-              s"error annotation ${annot.show} has no meaning on a method, annotate the scope itself.",
-              annot.pos
-            )
-        end if
-        metaAnnots.map(encodeMeta)
-      end metaAnnots
-      val meta                                          = typesToTuple(metaAnnots)
+      val annots = method.annotations.filter(isMeta).map(encodeMeta)
+
+      val meta = typesToTuple(annots)
+
       val (inputTypes, inputLabels, inputMetas, output) =
         tpe.memberType(method) match
           case ByNameType(res)                        =>
@@ -175,21 +149,20 @@ object OpsMirror:
       val inTup                                         = typesToTuple(inputTypes)
       val inLab                                         = typesToTuple(inputLabels)
       val inMet                                         = typesToTuple(inputMetas)
-      (meta, inTup, inLab, inMet, errorTpe, output) match
-        case ('[m], '[i], '[l], '[iM], '[e], '[o]) =>
+      (meta, inTup, inLab, inMet, output) match
+        case ('[m], '[i], '[l], '[iM], '[o]) =>
           Type.of[
             Operation {
               type Metadata       = m
               type InputTypes     = i
               type InputLabels    = l
               type InputMetadatas = iM
-              type ErrorType      = e
               type OutputType     = o
             }
           ]
       end match
     )
-    val clsMeta   = typesToTuple(gmeta)
+    val clsMeta   = typesToTuple(annots)
     val opsTup    = typesToTuple(ops.toList)
     val labelsTup = typesToTuple(labels.map(_.asType))
     val name      = ConstantType(StringConstant(cls.name)).asType
